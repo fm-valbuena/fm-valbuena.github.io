@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>r00t@parrot:~$ Marc Valbuena</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Fira+Code:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #0d0f14;
+      --bg2:       #12151c;
+      --bg3:       #1a1d26;
+      --border:    #2a2e3d;
+      --green:     #7aff00;
+      --green-dim: #4ab800;
+      --cyan:      #00e5ff;
+      --blue:      #4fa3ff;
+      --red:       #ff4f6e;
+      --orange:    #ffb347;
+      --purple:    #c678dd;
+      --white:     #e0e6f0;
+      --dim:       #6b7280;
+      --scanline:  rgba(0,229,255,0.025);
+      --glow:      0 0 8px rgba(122,255,0,0.4);
+      --glow-c:    0 0 8px rgba(0,229,255,0.4);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+      overflow: hidden;
+    }
+
+    /* ── CRT scanline overlay ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        var(--scanline) 2px,
+        var(--scanline) 4px
+      );
+      pointer-events: none;
+      z-index: 9998;
+    }
+
+    /* ── vignette ── */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.65) 100%);
+      pointer-events: none;
+      z-index: 9997;
+    }
+
+    /* ══════════════════════════════════
+       BOOT SCREEN
+    ══════════════════════════════════ */
+    #boot {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      z-index: 9000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 10vw;
+      animation: bootFade 0.4s ease 3.8s forwards;
+    }
+    @keyframes bootFade { to { opacity: 0; pointer-events: none; } }
+
+    .boot-line {
+      font-size: 0.78rem;
+      line-height: 1.7;
+      color: var(--dim);
+      opacity: 0;
+      white-space: nowrap;
+    }
+    .boot-line.ok   { color: var(--green); }
+    .boot-line.warn { color: var(--orange); }
+    .boot-line.info { color: var(--cyan); }
+
+    /* stagger each boot line */
+    .boot-line:nth-child(1)  { animation: bline 0.05s 0.05s forwards; }
+    .boot-line:nth-child(2)  { animation: bline 0.05s 0.20s forwards; }
+    .boot-line:nth-child(3)  { animation: bline 0.05s 0.34s forwards; }
+    .boot-line:nth-child(4)  { animation: bline 0.05s 0.46s forwards; }
+    .boot-line:nth-child(5)  { animation: bline 0.05s 0.58s forwards; }
+    .boot-line:nth-child(6)  { animation: bline 0.05s 0.70s forwards; }
+    .boot-line:nth-child(7)  { animation: bline 0.05s 0.82s forwards; }
+    .boot-line:nth-child(8)  { animation: bline 0.05s 0.94s forwards; }
+    .boot-line:nth-child(9)  { animation: bline 0.05s 1.06s forwards; }
+    .boot-line:nth-child(10) { animation: bline 0.05s 1.18s forwards; }
+    .boot-line:nth-child(11) { animation: bline 0.05s 1.30s forwards; }
+    .boot-line:nth-child(12) { animation: bline 0.05s 1.42s forwards; }
+    .boot-line:nth-child(13) { animation: bline 0.05s 1.54s forwards; }
+    .boot-line:nth-child(14) { animation: bline 0.05s 1.70s forwards; }
+    @keyframes bline { to { opacity: 1; } }
+
+    /* ══════════════════════════════════
+       WINDOW CHROME
+    ══════════════════════════════════ */
+    #window-wrap {
+      position: fixed; inset: 0;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      animation: wAppear 0.5s ease 4.1s forwards;
+    }
+    @keyframes wAppear { to { opacity: 1; } }
+
+    .titlebar {
+      flex-shrink: 0;
+      height: 34px;
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 8px;
+      user-select: none;
+    }
+
+    .tb-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: filter 0.2s;
+    }
+    .tb-dot:hover { filter: brightness(1.4); }
+    .tb-dot.close  { background: #ff5f56; }
+    .tb-dot.min    { background: #ffbd2e; }
+    .tb-dot.max    { background: #27c93f; }
+
+    .tb-title {
+      flex: 1;
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--dim);
+      letter-spacing: 0.08em;
+    }
+
+    .tb-parrot {
+      font-size: 0.68rem;
+      color: var(--cyan);
+      letter-spacing: 0.06em;
+    }
+
+    /* ── tab bar ── */
+    .tabbar {
+      flex-shrink: 0;
+      height: 30px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-end;
+      padding: 0 10px;
+      gap: 2px;
+    }
+
+    .tab {
+      padding: 4px 14px;
+      font-size: 0.68rem;
+      color: var(--dim);
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+    }
+    .tab.active {
+      color: var(--green);
+      background: var(--bg);
+      border-color: var(--green-dim);
+      text-shadow: var(--glow);
+    }
+    .tab:not(.active):hover { color: var(--white); }
+
+    /* ══════════════════════════════════
+       TERMINAL BODY
+    ══════════════════════════════════ */
+    #terminal {
+      flex: 1;
+      overflow-y: auto;
+      padding: 18px 24px 8px;
+      background: var(--bg);
+      scroll-behavior: smooth;
+    }
+
+    #terminal::-webkit-scrollbar { width: 6px; }
+    #terminal::-webkit-scrollbar-track { background: var(--bg2); }
+    #terminal::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+    #terminal::-webkit-scrollbar-thumb:hover { background: var(--green-dim); }
+
+    /* ── ASCII banner ── */
+    .ascii-art {
+      white-space: pre;
+      font-size: clamp(0.38rem, 1.1vw, 0.72rem);
+      line-height: 1.15;
+      color: var(--cyan);
+      text-shadow: var(--glow-c);
+      margin-bottom: 0.6em;
+      animation: fadeSlide 0.6s ease 4.3s both;
+    }
+
+    .ascii-sub {
+      font-size: 0.72rem;
+      color: var(--green);
+      text-shadow: var(--glow);
+      margin-bottom: 0.2em;
+      animation: fadeSlide 0.4s ease 4.5s both;
+    }
+
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── lines ── */
+    .line {
+      margin: 2px 0;
+      white-space: pre-wrap;
+      font-size: 0.82rem;
+      line-height: 1.55;
+    }
+
+    .command { color: var(--green); text-shadow: var(--glow); }
+    .directory { color: var(--blue); font-weight: 600; }
+    .text { color: var(--white); }
+    .error { color: var(--red); }
+    .info  { color: var(--cyan); }
+    .muted { color: var(--dim); }
+    .highlight { color: var(--orange); }
+    .success { color: var(--green); }
+
+    /* ── prompt ── */
+    .prompt-block {
+      font-family: inherit;
+      white-space: pre;
+      line-height: 1.4;
+      margin: 6px 0 2px;
+      font-size: 0.82rem;
+    }
+
+    .p-user     { color: var(--green); font-weight: 700; text-shadow: var(--glow); }
+    .p-at       { color: var(--white); }
+    .p-host     { color: var(--cyan);  text-shadow: var(--glow-c); }
+    .p-path     { color: var(--blue); }
+    .p-arrow    { color: var(--green); text-shadow: var(--glow); }
+    .p-git      { color: var(--purple); }
+
+    /* ── input row ── */
+    #input-block {
+      padding: 4px 0 12px;
+    }
+
+    .input-prompt-inline {
+      white-space: nowrap;
+      font-size: 0.82rem;
+      flex-shrink: 0;
+    }
+
+    .terminal-input {
+      background: none;
+      border: none;
+      color: var(--white);
+      outline: none;
+      font-family: inherit;
+      font-size: 0.82rem;
+      flex-grow: 1;
+      caret-color: var(--green);
+      padding-left: 4px;
+    }
+
+    /* blinking cursor simulation via caret */
+    .terminal-input:focus { border-left: none; }
+
+    /* ── status bar ── */
+    .statusbar {
+      flex-shrink: 0;
+      height: 22px;
+      background: var(--bg3);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 18px;
+      font-size: 0.62rem;
+      color: var(--dim);
+      letter-spacing: 0.05em;
+    }
+
+    .sb-item { display: flex; align-items: center; gap: 5px; }
+    .sb-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+    .sb-key { color: var(--cyan); }
+
+    /* ══════════════════════════════════
+       OVERLAY (certificates / images)
+    ══════════════════════════════════ */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.88);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      backdrop-filter: blur(4px);
+    }
+
+    .overlay-box {
+      position: relative;
+      border: 1px solid var(--green-dim);
+      box-shadow: 0 0 30px rgba(122,255,0,0.2), 0 0 60px rgba(122,255,0,0.08);
+      max-width: 88vw;
+      max-height: 88vh;
+    }
+
+    .overlay-header {
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+      padding: 6px 14px;
+      font-size: 0.68rem;
+      color: var(--green);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .overlay img {
+      display: block;
+      max-width: 100%;
+      max-height: 80vh;
+    }
+
+    .overlay-close {
+      cursor: pointer;
+      color: var(--red);
+      font-size: 0.8rem;
+      padding: 2px 8px;
+      border: 1px solid var(--red);
+      border-radius: 3px;
+      transition: background 0.15s;
+    }
+    .overlay-close:hover { background: rgba(255,79,110,0.15); }
+
+    /* ══════════════════════════════════
+       HELP TABLE
+    ══════════════════════════════════ */
+    .help-table {
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 600px;
+      margin: 4px 0;
+      font-size: 0.79rem;
+    }
+    .help-table td {
+      padding: 2px 10px 2px 0;
+      vertical-align: top;
+    }
+    .help-table td:first-child { white-space: nowrap; }
+
+    /* ══════════════════════════════════
+       SKILLS GRID
+    ══════════════════════════════════ */
+    .skills-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 4px 0;
+    }
+    .skill-badge {
+      padding: 2px 10px;
+      border: 1px solid var(--green-dim);
+      border-radius: 3px;
+      font-size: 0.72rem;
+      color: var(--green);
+      background: rgba(122,255,0,0.05);
+      white-space: nowrap;
+    }
+
+    /* ══════════════════════════════════
+       MISC
+    ══════════════════════════════════ */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 8px 0;
+    }
+
+    /* typewriter for instructions */
+    #instructions {
+      font-size: 0.78rem;
+      color: var(--dim);
+      margin-bottom: 8px;
+      animation: fadeSlide 0.4s ease 4.7s both;
+    }
+
+    /* flicker effect on load */
+    @keyframes flicker {
+      0%,19%,21%,23%,25%,54%,56%,100% { opacity:1; }
+      20%,24%,55% { opacity:0.4; }
+    }
+    #window-wrap { animation: wAppear 0.5s ease 4.1s forwards, flicker 0.25s ease 4.1s; }
+  </style>
+</head>
+<body>
+
+<!-- ══ BOOT SCREEN ══ -->
+<div id="boot">
+  <div class="boot-line info">MarcOS 6.3 (Lorikeet) — Linux 6.6.9-amd69</div>
+  <div class="boot-line ok">  [  OK  ] Reached target Basic System</div>
+  <div class="boot-line ok">  [  OK  ] Started Cryptography Setup</div>
+  <div class="boot-line ok">  [  OK  ] Started Network Manager</div>
+  <div class="boot-line warn">  [ WARN ] Some encrypted volumes require passphrase</div>
+  <div class="boot-line ok">  [  OK  ] Started Anonymous Networking Service (Anonsurf)</div>
+  <div class="boot-line ok">  [  OK  ] Reached target Network</div>
+  <div class="boot-line ok">  [  OK  ] Started OpenSSH Server Daemon</div>
+  <div class="boot-line ok">  [  OK  ] Started Metasploit Framework</div>
+  <div class="boot-line ok">  [  OK  ] Started BurpSuite Community</div>
+  <div class="boot-line ok">  [  OK  ] Started Wireshark Packet Capture</div>
+  <div class="boot-line ok">  [  OK  ] Reached target Multi-User System</div>
+  <div class="boot-line info">  Starting graphical session for marc@safe…</div>
+  <div class="boot-line ok">  [  OK  ] Session initialized — portfolio terminal ready</div>
+</div>
+
+<!-- ══ MAIN WINDOW ══ -->
+<div id="window-wrap">
+
+  <!-- Title bar -->
+  <div class="titlebar">
+    <div class="tb-dot close"></div>
+    <div class="tb-dot min"></div>
+    <div class="tb-dot max"></div>
+    <div class="tb-title">Terminal — marc@safe: ~</div>
+    <div class="tb-parrot">⬡ Parrot OS 6.3</div>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="tabbar">
+    <div class="tab active">bash — marc@safe: ~</div>
+    <div class="tab" onclick="window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ','_blank','noopener,noreferrer')">+</div>
+  </div>
+
+  <!-- Terminal output area -->
+  <div id="terminal">
+
+    <!-- ASCII Banner -->
+    <div class="ascii-art" id="ascii-art">
+░██       ░██            ░██                                                  
+░██       ░██            ░██                                                  
+░██  ░██  ░██  ░███████  ░██  ░███████   ░███████  ░█████████████   ░███████  
+░██ ░████ ░██ ░██    ░██ ░██ ░██    ░██ ░██    ░██ ░██   ░██   ░██ ░██    ░██ 
+░██░██ ░██░██ ░█████████ ░██ ░██        ░██    ░██ ░██   ░██   ░██ ░█████████ 
+░████   ░████ ░██        ░██ ░██    ░██ ░██    ░██ ░██   ░██   ░██ ░██        
+░███     ░███  ░███████  ░██  ░███████   ░███████  ░██   ░██   ░██  ░███████  
+    </div>
+
+    <div class="ascii-sub">marc@safe — Cybersecurity Professional ·  v1.0.0</div>
+    <hr class="divider">
+
+    <div class="line info" id="instructions">Type <span class="command">help</span> to see available commands</div>
+
+    <!-- Input block -->
+    <div id="input-block">
+      <pre class="prompt-block" id="live-prompt"><span class="p-user">┌──(guestuser@safe)-[</span><span class="p-path" id="cwd-display">~</span><span class="p-user">]</span>
+<span class="p-arrow">└─$ </span><input type="text" id="input" class="terminal-input" autocomplete="off" autofocus spellcheck="false" /></pre>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="statusbar">
+    <div class="sb-item"><div class="sb-dot"></div><span class="sb-key">STATUS:</span> ONLINE</div>
+    <div class="sb-item"><span class="sb-key">OS:</span> Parrot 6.9 (Lorikeet)</div>
+    <div class="sb-item"><span class="sb-key">KERNEL:</span> 6.6.9-amd69</div>
+    <div class="sb-item"><span class="sb-key">SHELL:</span> bash 5.12.13</div>
+    <div class="sb-item" id="sb-time"></div>
+  </div>
+
+</div>
+
+<!-- ══ SCRIPT ══ -->
+<script>
+  // ── clock ──
+  function updateClock() {
+    const el = document.getElementById('sb-time');
+    if (!el) return;
+    const now = new Date();
+    el.innerHTML = `<span class="sb-key">TIME:</span> ${now.toLocaleTimeString('en-US',{hour12:false})}`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ── helpers ──
+  function escapeHtml(text) {
+    if (text == null) return '';
+    return String(text).replace(/[&<>"'`]/g, c =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])
+    );
+  }
+  function isSafeUrl(u) {
+    try { const p = new URL(u).protocol; return p==='http:'||p==='https:'; }
+    catch { return false; }
+  }
+
+  // ── DOM refs ──
+  const terminal  = document.getElementById('terminal');
+  const inputBlock= document.getElementById('input-block');
+
+  // ── insert helpers ──
+  function ins(node) { terminal.insertBefore(node, inputBlock); terminal.scrollTop = terminal.scrollHeight; }
+
+  function addTextLine(text, cls='text') {
+    const d = document.createElement('div');
+    d.className = 'line ' + cls;
+    d.textContent = text;
+    ins(d);
+  }
+
+  function addHtmlLine(html, cls='text') {
+    const d = document.createElement('div');
+    d.className = 'line ' + cls;
+    d.innerHTML = html;
+    ins(d);
+  }
+
+  function addNode(node) { ins(node); }
+
+  function addBlank() { addHtmlLine('&nbsp;'); }
+
+  // ── virtual FS ──
+  const fs = {
+    "~": {
+      type: "dir",
+      contents: {
+        "certificates": {
+          type: "dir",
+          contents: {
+            "CAPen.jpg": {
+              type: "file",
+              path: "https://candidate.speedexam.net/certificate.aspx?SSTATE=am4131EniU8ntjp4bO5mXbT4QdB5o91LpQ/Yi+17iUMoiYvdyLHdG0zeG0qEGvDKzqoWHXVdxHihM0uBjNs1lNf+aS4XYOkn8yDBz7nKzvc="
+            },
+            "CNPen.jpg": {
+              type: "file",
+              path: "https://candidate.speedexam.net/certificate.aspx?SSTATE=am4131EniU8ntjp4bO5mXblY3DeZ9H+GglTpJlSwv1LOhpqBQXy4c2xDbhjjyOcdewBBT3bTOx4PeFoUnwfKwm8du0GL//WpnEutcmi3Z/s="
+            },
+            "CRTA.jpg": {
+              type: "file",
+              path: "https://labs.cyberwarfare.live/credential/achievement/68a43a53f4c7625a2950ffdd"
+            },
+            "CWES.jpg": {
+              type: "file",
+              path: "https://www.credly.com/badges/1d68c171-351b-4c73-a5c4-86f467de8303/public_url"
+            }
+          }
+        }
+      }
+    }
+  };
+
+  let cwd = "~";
+
+  function getNode(path) {
+    if (path === "~") return fs["~"];
+    const parts = path.replace(/^~\//, '').split('/');
+    let node = fs["~"];
+    for (const p of parts) {
+      if (!node || node.type !== 'dir' || !node.contents[p]) return null;
+      node = node.contents[p];
+    }
+    return node;
+  }
+
+  function resolvePath(dir) {
+    if (!dir || dir === "~") return "~";
+    if (dir === ".") return cwd;
+    if (dir === "..") {
+      if (cwd === "~") return "~";
+      const a = cwd.split("/"); a.pop();
+      return a.join("/") || "~";
+    }
+    const newPath = (cwd === "~") ? `~/${dir}` : `${cwd}/${dir}`;
+    const node = getNode(newPath);
+    return (node && node.type === 'dir') ? newPath : null;
+  }
+
+  // ── autocomplete ──
+  function getCompletions(partial) {
+    const node = getNode(cwd);
+    if (!node || node.type !== 'dir') return [];
+    return Object.keys(node.contents).filter(k => k.toLowerCase().startsWith(partial.toLowerCase()));
+  }
+
+  // ── render prompt history ──
+  function renderPromptHistory(cmd) {
+    const pre = document.createElement('pre');
+    pre.className = 'prompt-block';
+    pre.innerHTML =
+      `<span class="p-user">┌──(guestuser@safe)-[${escapeHtml(cwd)}]</span>\n<span class="p-arrow">└─$ </span>`;
+    const t = document.createTextNode(cmd);
+    pre.appendChild(t);
+    const block = document.createElement('div');
+    block.className = 'command-block';
+    block.appendChild(pre);
+    ins(block);
+  }
+
+  // ── update prompt ──
+  function updatePrompt() {
+    const livePrompt = document.getElementById('live-prompt');
+    if (livePrompt) {
+      livePrompt.innerHTML =
+        `<span class="p-user">┌──(guestuser@safe)-[${escapeHtml(cwd)}]</span>\n<span class="p-arrow">└─$ </span><input type="text" id="input" class="terminal-input" autocomplete="off" spellcheck="false" />`;
+      const newInp = document.getElementById('input');
+      if (newInp) { newInp.focus(); bindInput(newInp); }
+    }
+  }
+
+  // ── overlay ──
+  function showOverlay(filePath, name) {
+    if (/^https?:\/\//i.test(filePath) && !isSafeUrl(filePath)) {
+      addTextLine('cat: refused to open unsafe URL', 'error');
+      return;
+    }
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay';
+
+    const box = document.createElement('div');
+    box.className = 'overlay-box';
+
+    const header = document.createElement('div');
+    header.className = 'overlay-header';
+    header.innerHTML = `<span>📄 ${escapeHtml(name)}</span>`;
+
+    const closeBtn = document.createElement('div');
+    closeBtn.className = 'overlay-close';
+    closeBtn.textContent = '✕ close';
+    closeBtn.onclick = () => overlay.remove();
+    header.appendChild(closeBtn);
+
+    const img = document.createElement('img');
+    img.src = filePath;
+    img.alt = name;
+    img.onerror = () => {
+      // If image fails, it's probably a URL to open
+      overlay.remove();
+      window.open(filePath, '_blank', 'noopener,noreferrer');
+    };
+
+    box.appendChild(header);
+    box.appendChild(img);
+    overlay.appendChild(box);
+    overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+    document.body.appendChild(overlay);
+  }
+
+  // ── commands data ──
+  const whoamiParagraphs = [
+    "Hi, I'm Marc Valbuena — a cybersecurity enthusiast passionate about building a safer and more transparent digital world.",
+    "For the past 10 years, I've been immersed in Information Security, specializing in offensive security across web applications, networks, mobile apps, and APIs. My approach is rooted in ethical, non-intrusive research and responsible disclosure — helping organizations identify vulnerabilities before they become real threats.",
+    "I don't just find problems — I aim to provide clarity, actionable insights, and real-world solutions that strengthen security from the inside out.",
+    "Outside of cybersecurity, I'm a gamer by curiosity, and a photographer by perspective. I enjoy blending technical thinking with creativity, always exploring new ideas and challenges.",
+    "If you're interested in collaborating, improving security, or just having a great conversation — feel free to reach out.",
+  ];
+
+  const skillsList = ["HTML","CSS","JavaScript","Python","Linux","Networking",
+    "Penetration Testing","Bug Bounty","Web Security","OSINT","Burp Suite","Metasploit"];
+
+  const helpItems = [
+    { cmd: 'whoami',       desc: 'About me' },
+    { cmd: 'skills',       desc: 'Technical skills' },
+    { cmd: 'recognitions', desc: 'Hall of Fame & CVD acknowledgements' },
+    { cmd: 'socials',      desc: 'Social links' },
+    { cmd: 'neofetch',     desc: 'System & operator info' },
+    { cmd: 'ls',           desc: 'List current directory' },
+    { cmd: 'cd [dir]',     desc: 'Change directory' },
+    { cmd: 'pwd',          desc: 'Print working directory' },
+    { cmd: 'cat [file]',   desc: 'Open file or certificate' },
+    { cmd: 'clear',        desc: 'Clear terminal' },
+  ];
+
+  const startTime = Date.now();
+
+  // ── command handler ──
+  function handleCommand(rawValue) {
+    const parts = rawValue.trim().split(/\s+/);
+    const cmd  = parts[0].toLowerCase();
+    const arg1 = parts[1] || "";
+
+    if (cmd === 'clear') {
+      document.querySelectorAll('.command-block, .line').forEach(el => {
+        if (el.id === 'ascii-art' || el.id === 'instructions') return;
+        el.remove();
+      });
+      return;
+    }
+
+    if (cmd === 'help') {
+      addBlank();
+      addHtmlLine('<span class="info">Available commands</span>', 'text');
+      addHtmlLine('<span class="muted">─────────────────────────────────────────</span>', 'text');
+      const table = document.createElement('table');
+      table.className = 'help-table';
+      for (const item of helpItems) {
+        const tr = document.createElement('tr');
+        const td1 = document.createElement('td');
+        const td2 = document.createElement('td');
+        td1.innerHTML = `<span class="command">${escapeHtml(item.cmd)}</span>`;
+        td2.style.color = 'var(--dim)';
+        td2.textContent = '— ' + item.desc;
+        tr.appendChild(td1); tr.appendChild(td2);
+        table.appendChild(tr);
+      }
+      const wrap = document.createElement('div');
+      wrap.className = 'line text';
+      wrap.appendChild(table);
+      ins(wrap);
+      addBlank();
+      return;
+    }
+
+    if (cmd === 'whoami') {
+      addBlank();
+      addHtmlLine('<span class="info">// About Me</span>');
+      addHtmlLine('<span class="muted">─────────────────────────────────────────</span>');
+      for (const para of whoamiParagraphs) {
+        const d = document.createElement('div');
+        d.className = 'line text';
+        d.style.cssText = 'text-align:justify;text-justify:inter-word;max-width:72ch;line-height:1.75;margin:4px 0;';
+        d.textContent = para;
+        ins(d);
+        addBlank();
+      }
+      return;
+    }
+
+    if (cmd === 'skills') {
+      addBlank();
+      addHtmlLine('<span class="info">// Skills</span>');
+      addHtmlLine('<span class="muted">─────────────────────────────────────────</span>');
+      const grid = document.createElement('div');
+      grid.className = 'skills-grid';
+      for (const s of skillsList) {
+        const b = document.createElement('div');
+        b.className = 'skill-badge';
+        b.textContent = s;
+        grid.appendChild(b);
+      }
+      const wrap = document.createElement('div');
+      wrap.className = 'line text';
+      wrap.appendChild(grid);
+      ins(wrap);
+      addBlank();
+      return;
+    }
+
+    if (cmd === 'neofetch') {
+      addBlank();
+      const nf = document.createElement('div');
+      nf.className = 'line text';
+      nf.style.display = 'flex';
+      nf.style.gap = '28px';
+      nf.style.alignItems = 'flex-start';
+
+      // ASCII portrait (left column) — parrot logo
+      const asciiLines = [
+       '                                                   ',
+        '                .+##%%%*.                         ',
+        '            .+%%%%%%%%%%%+-                       ',
+        '        ..+%#########%%%%#%%%%+..                 ',
+        '       =%%%%%%#########%%%##%%%%=                 ',
+        '      .%@@@@@@@@@@%%####%@%%%%%#.                 ',
+        '     .%%@@@@@@@@@@@@@@%%%@@%%@%%.                 ',
+        '     =%%%+=-------=+**%@@%@@@@%@+                 ',
+        '     %%%=---::::::::::-=*=-=+=#%@:                ',
+        '    :@%+=---::::::::::::::---==%@=                ',
+        '    .@%==----::::::::::::----==*@=                ',
+        '    .@#==+#####+------=*####*==+@=                ',
+        '    .@+==------=------==-----==+%=                ',
+        '  ...%+==+*#%%+==----===#%%#+==+#-..              ',
+        '  ..+=+==-=%@@#-=--:-==*@@@*:-=++=-               ',
+        '    -++==-::::::--:::-::::::-==++=.               ',
+        '  ..:=++=--::::::----:::::::-==++-.               ',
+        ' ::::::::::::::::::::::::::::::::::::.             ',
+        ' ------------------------------------.             ',
+        ' ------------------------------------.             ',
+        ' ------------------------------------              ',
+        ' -===--------------------------------             ',
+        ' -============-----------------------             ',
+        ' :===============--::-==------------:             ',
+        ' :================---==========-----:             ',
+        ' -==================================:             ',
+        ':-+==================================:            ',
+        '.--+=================================--.          ',
+        '---+++++++++++++++++++++============+--:          ',
+      ];
+      const portrait = document.createElement('pre');
+      portrait.style.cssText = 'color:var(--cyan);text-shadow:var(--glow-c);font-size:0.48rem;line-height:1.25;flex-shrink:0;letter-spacing:0.01em;opacity:0.85;';
+      portrait.textContent = asciiLines.join('\n');
+
+      // info rows (right column)
+      const info = document.createElement('div');
+      info.style.cssText = 'font-size:0.79rem;line-height:1.8;padding-top:4px;';
+      const rows = [
+        ['<span style="color:var(--green);font-weight:700;">marc</span><span style="color:var(--white);">@</span><span style="color:var(--cyan);font-weight:700;">safe</span>', ''],
+        ['─────────────────────────────', ''],
+        ['<span style="color:var(--cyan);">Name</span>',       'Marc Valbuena'],
+        ['<span style="color:var(--cyan);">OS</span>',   'MarcOS Pro'],
+        ['<span style="color:var(--cyan);">Shell</span>',    'bash (Pls don’t!)'],
+        ['<span style="color:var(--cyan);">Terminal</span>', 'Portfolio Terminal v1.0.0'],
+        ['<span style="color:var(--cyan);">Role</span>',     'Penetration Tester / Bug Hunter'],
+        ['<span style="color:var(--cyan);">Focus</span>',    'Web Security · OSINT · CVD'],
+        ['<span style="color:var(--cyan);">Tools</span>',    'Burp Suite · Metasploit · Nmap · OWASPZAP'],
+        ['<span style="color:var(--cyan);">Email</span>',    'marcelinvalbuena@gmail.com'],
+        ['<span style="color:var(--cyan);">LinkedIn</span>', '<a href="https://www.linkedin.com/in/marc-valbuena/" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;">linkedin.com/in/marc-valbuena</a>'],
+        ['─────────────────────────────', ''],
+      ];
+      for (const [key, val] of rows) {
+        const row = document.createElement('div');
+        if (val === '') { row.innerHTML = key; }
+        else { row.innerHTML = `${key}<span style="color:var(--dim);"> : </span>${val}`; }
+        info.appendChild(row);
+      }
+      // colour palette dots
+      const palette = document.createElement('div');
+      palette.style.cssText = 'display:flex;gap:6px;margin-top:4px;';
+      const colours = ['#ff4f6e','#ffb347','#7aff00','#00e5ff','#4fa3ff','#c678dd','#e0e6f0','#6b7280'];
+      for (const c of colours) {
+        const dot = document.createElement('div');
+        dot.style.cssText = `width:14px;height:14px;border-radius:50%;background:${c};`;
+        palette.appendChild(dot);
+      }
+      info.appendChild(palette);
+
+      nf.appendChild(portrait);
+      nf.appendChild(info);
+      ins(nf);
+      addBlank();
+      return;
+    }
+
+    if (cmd === 'recognitions') {
+      addBlank();
+      addHtmlLine('<span class="info">// Hall of Fame & CVD Acknowledgements</span>');
+      addHtmlLine('<span class="muted">─────────────────────────────────────────────────</span>');
+      const recogs = [
+        { org: 'UN',      label: 'United Nations',           url: 'https://unite.un.org/en/un-information-security-hall-fame' },
+        { org: 'UNESCO',  label: 'UNESCO',                   url: 'https://www.unesco.org/en/vulnerability-disclosure' },
+        { org: 'UNICEF',  label: 'UNICEF',                   url: 'https://www.unicef.org/digitalimpact/unicef-information-security-hall-fame' },
+        { org: 'WHO',     label: 'WHO',                      url: 'https://www.who.int/about/cybersecurity/vulnerability-hall-of-fame/ethical-hacker-list' },
+        { org: 'Achmea',  label: 'Achmea',                   url: 'https://www.achmea.nl/en/responsible-disclosure/hall-of-fame' },
+        { org: 'Nokia',   label: 'Nokia',                    url: 'https://www.nokia.com/we-are-nokia/security/products/cvd/hall-of-fame/' },
+        { org: 'US DoE',  label: 'US Dept of Education',     url: 'https://www.ed.gov' },
+      ];
+      for (const r of recogs) {
+        const d = document.createElement('div');
+        d.className = 'line text';
+        d.innerHTML = `  <span class="highlight">[${r.org.padEnd(6)}]</span>  <a href="${r.url}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;transition:color 0.15s;" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--blue)'">${r.label}</a>`;
+        ins(d);
+      }
+      addBlank();
+      return;
+    }
+
+    if (cmd === 'socials') {
+      addBlank();
+      const socInfo = document.createElement('div');
+      socInfo.style.cssText = 'font-size:0.79rem;line-height:1.85;';
+      const header = document.createElement('div');
+      header.innerHTML = `<span style="color:var(--green);font-weight:700;">┌──(guestuser@safe)</span>  —  Social Links`;
+      header.style.marginBottom = '2px';
+      const divLine = document.createElement('div');
+      divLine.innerHTML = '<span style="color:var(--dim);">─────────────────────────────</span>';
+      socInfo.appendChild(header);
+      socInfo.appendChild(divLine);
+      const links = [
+        { key: 'LinkedIn', url: 'https://www.linkedin.com/in/marc-valbuena/', label: 'linkedin.com/in/marc-valbuena' },
+      ];
+      for (const lk of links) {
+        const row = document.createElement('div');
+        row.innerHTML = `<span style="color:var(--cyan);">${lk.key.padEnd(10)}</span><span style="color:var(--dim);"> : </span><a href="${lk.url}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--blue)'">${lk.label}</a>`;
+        socInfo.appendChild(row);
+      }
+      const wrap = document.createElement('div');
+      wrap.className = 'line text';
+      wrap.appendChild(socInfo);
+      ins(wrap);
+      addBlank();
+      return;
+    }
+
+    if (cmd === 'ls') {
+      const node = getNode(cwd);
+      if (!node || node.type !== 'dir') { addTextLine('ls: cannot access directory', 'error'); return; }
+      const items = Object.keys(node.contents).sort();
+      const wrap = document.createElement('div');
+      wrap.className = 'line text';
+      items.forEach((name, i) => {
+        const item = node.contents[name];
+        if (item.type === 'dir') {
+          const s = document.createElement('span');
+          s.className = 'directory';
+          s.textContent = name + '/';
+          wrap.appendChild(s);
+        } else {
+          wrap.appendChild(document.createTextNode(name));
+        }
+        if (i < items.length - 1) wrap.appendChild(document.createTextNode('   '));
+      });
+      ins(wrap);
+      return;
+    }
+
+    if (cmd === 'cd') {
+      const newPath = resolvePath(arg1);
+      if (newPath) { cwd = newPath; updatePrompt(); }
+      else addTextLine(`cd: no such file or directory: ${arg1}`, 'error');
+      return;
+    }
+
+    if (cmd === 'pwd') { addTextLine(cwd); return; }
+
+    if (cmd === 'cat') {
+      const dirNode = getNode(cwd);
+      if (dirNode && dirNode.contents[arg1] && dirNode.contents[arg1].type === 'file') {
+        const filePath = dirNode.contents[arg1].path;
+        if (/^https?:\/\//i.test(filePath)) {
+          if (isSafeUrl(filePath)) {
+            addHtmlLine(`Opening <span class="command">${escapeHtml(arg1)}</span>…`, 'info');
+            showOverlay(filePath, arg1);
+          } else {
+            addTextLine('cat: refused to open unsafe URL', 'error');
+          }
+        } else {
+          showOverlay(filePath, arg1);
+        }
+      } else {
+        addTextLine(`cat: ${arg1}: No such file`, 'error');
+      }
+      return;
+    }
+
+    addHtmlLine(`<span class="error">${escapeHtml(cmd)}: command not found</span> — type <span class="command">help</span> for available commands`);
+  }
+
+  // ── keep input focused at all times ──
+  function keepFocus() {
+    const inp = document.getElementById('input');
+    if (inp) inp.focus();
+  }
+
+  document.addEventListener('keydown', function(e) {
+    const inp = document.getElementById('input');
+    if (!inp) return;
+    if (document.activeElement && document.activeElement !== inp &&
+        (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+    inp.focus();
+  });
+
+  // ── input binding ──
+  function bindInput(inp) {
+    inp.addEventListener('keydown', function(e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const val = inp.value;
+        const parts = val.split(/\s+/);
+        if (parts.length >= 2) {
+          const partial = parts[parts.length - 1];
+          const completions = getCompletions(partial);
+          if (completions.length === 1) {
+            parts[parts.length - 1] = completions[0];
+            inp.value = parts.join(' ');
+          }
+        }
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        const raw = inp.value || "";
+        const value = raw.trim();
+        if (!value) return;
+        renderPromptHistory(value);
+        handleCommand(value);
+        terminal.appendChild(inputBlock);
+        inp.value = '';
+        terminal.scrollTop = terminal.scrollHeight;
+        setTimeout(keepFocus, 0);
+      }
+    });
+
+    inp.addEventListener('blur', function() {
+      setTimeout(() => {
+        if (!document.querySelector('.overlay')) keepFocus();
+      }, 120);
+    });
+  }
+
+  terminal.addEventListener('click', keepFocus);
+
+  // ── init ──
+  (function init() {
+    const inp = document.getElementById('input');
+    if (inp) bindInput(inp);
+    keepFocus();
+  })();
+</script>
+</body>
+</html>
