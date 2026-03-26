@@ -371,25 +371,6 @@
     .help-table td:first-child { white-space: nowrap; }
 
     /* ══════════════════════════════════
-       SKILLS GRID
-    ══════════════════════════════════ */
-    .skills-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin: 4px 0;
-    }
-    .skill-badge {
-      padding: 2px 10px;
-      border: 1px solid var(--green-dim);
-      border-radius: 3px;
-      font-size: 0.72rem;
-      color: var(--green);
-      background: rgba(122,255,0,0.05);
-      white-space: nowrap;
-    }
-
-    /* ══════════════════════════════════
        MISC
     ══════════════════════════════════ */
     .divider {
@@ -543,6 +524,18 @@
     "~": {
       type: "dir",
       contents: {
+        "recognition.txt": {
+          type: "txt",
+          content:  [
+        { org: 'UN',      label: 'United Nations',           url: 'https://unite.un.org/en/un-information-security-hall-fame' },
+        { org: 'UNESCO',  label: 'UNESCO',                   url: 'https://www.unesco.org/en/vulnerability-disclosure' },
+        { org: 'UNICEF',  label: 'UNICEF',                   url: 'https://www.unicef.org/digitalimpact/unicef-information-security-hall-fame' },
+        { org: 'WHO',     label: 'WHO',                      url: 'https://www.who.int/about/cybersecurity/vulnerability-hall-of-fame/ethical-hacker-list' },
+        { org: 'Achmea',  label: 'Achmea',                   url: 'https://www.achmea.nl/en/responsible-disclosure/hall-of-fame' },
+        { org: 'Nokia',   label: 'Nokia',                    url: 'https://www.nokia.com/we-are-nokia/security/products/cvd/hall-of-fame/' },
+        { org: 'US DoE',  label: 'US Dept of Education',     url: 'https://www.ed.gov' },
+      ];
+        },
         "certificates": {
           type: "dir",
           contents: {
@@ -673,14 +666,8 @@
     "If you're interested in collaborating, improving security, or just having a great conversation — feel free to reach out.",
   ];
 
-  const skillsList = ["HTML","CSS","JavaScript","Python","Linux","Networking",
-    "Penetration Testing","Bug Bounty","Web Security","OSINT","Burp Suite","Metasploit"];
-
   const helpItems = [
     { cmd: 'whoami',       desc: 'About me' },
-    { cmd: 'skills',       desc: 'Technical skills' },
-    { cmd: 'recognitions', desc: 'Hall of Fame & CVD acknowledgements' },
-    { cmd: 'socials',      desc: 'Social links' },
     { cmd: 'neofetch',     desc: 'System & operator info' },
     { cmd: 'ls',           desc: 'List current directory' },
     { cmd: 'cd [dir]',     desc: 'Change directory' },
@@ -744,26 +731,6 @@
       return;
     }
 
-    if (cmd === 'skills') {
-      addBlank();
-      addHtmlLine('<span class="info">// Skills</span>');
-      addHtmlLine('<span class="muted">─────────────────────────────────────────</span>');
-      const grid = document.createElement('div');
-      grid.className = 'skills-grid';
-      for (const s of skillsList) {
-        const b = document.createElement('div');
-        b.className = 'skill-badge';
-        b.textContent = s;
-        grid.appendChild(b);
-      }
-      const wrap = document.createElement('div');
-      wrap.className = 'line text';
-      wrap.appendChild(grid);
-      ins(wrap);
-      addBlank();
-      return;
-    }
-
     if (cmd === 'neofetch') {
       addBlank();
       const nf = document.createElement('div');
@@ -819,8 +786,8 @@
         ['<span style="color:var(--cyan);">Shell</span>',    'bash (Pls don’t!)'],
         ['<span style="color:var(--cyan);">Terminal</span>', 'Portfolio Terminal v1.0.0'],
         ['<span style="color:var(--cyan);">Role</span>',     'Penetration Tester / Bug Hunter'],
-        ['<span style="color:var(--cyan);">Focus</span>',    'Web Security · OSINT · CVD'],
-        ['<span style="color:var(--cyan);">Tools</span>',    'Burp Suite · Metasploit · Nmap · OWASPZAP'],
+        ['<span style="color:var(--cyan);">Focus</span>',    'Offensive Security · OSINT · CVD · Threat Modeling'],
+        ['<span style="color:var(--cyan);">Tools</span>',    'Burp Suite · Metasploit · Nmap · OWASPZAP · SQLMap'],
         ['<span style="color:var(--cyan);">Email</span>',    'marcelinvalbuena@gmail.com'],
         ['<span style="color:var(--cyan);">LinkedIn</span>', '<a href="https://www.linkedin.com/in/marc-valbuena/" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;">linkedin.com/in/marc-valbuena</a>'],
         ['─────────────────────────────', ''],
@@ -845,56 +812,6 @@
       nf.appendChild(portrait);
       nf.appendChild(info);
       ins(nf);
-      addBlank();
-      return;
-    }
-
-    if (cmd === 'recognitions') {
-      addBlank();
-      addHtmlLine('<span class="info">// Hall of Fame & CVD Acknowledgements</span>');
-      addHtmlLine('<span class="muted">─────────────────────────────────────────────────</span>');
-      const recogs = [
-        { org: 'UN',      label: 'United Nations',           url: 'https://unite.un.org/en/un-information-security-hall-fame' },
-        { org: 'UNESCO',  label: 'UNESCO',                   url: 'https://www.unesco.org/en/vulnerability-disclosure' },
-        { org: 'UNICEF',  label: 'UNICEF',                   url: 'https://www.unicef.org/digitalimpact/unicef-information-security-hall-fame' },
-        { org: 'WHO',     label: 'WHO',                      url: 'https://www.who.int/about/cybersecurity/vulnerability-hall-of-fame/ethical-hacker-list' },
-        { org: 'Achmea',  label: 'Achmea',                   url: 'https://www.achmea.nl/en/responsible-disclosure/hall-of-fame' },
-        { org: 'Nokia',   label: 'Nokia',                    url: 'https://www.nokia.com/we-are-nokia/security/products/cvd/hall-of-fame/' },
-        { org: 'US DoE',  label: 'US Dept of Education',     url: 'https://www.ed.gov' },
-      ];
-      for (const r of recogs) {
-        const d = document.createElement('div');
-        d.className = 'line text';
-        d.innerHTML = `  <span class="highlight">[${r.org.padEnd(6)}]</span>  <a href="${r.url}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;transition:color 0.15s;" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--blue)'">${r.label}</a>`;
-        ins(d);
-      }
-      addBlank();
-      return;
-    }
-
-    if (cmd === 'socials') {
-      addBlank();
-      const socInfo = document.createElement('div');
-      socInfo.style.cssText = 'font-size:0.79rem;line-height:1.85;';
-      const header = document.createElement('div');
-      header.innerHTML = `<span style="color:var(--green);font-weight:700;">┌──(guestuser@safe)</span>  —  Social Links`;
-      header.style.marginBottom = '2px';
-      const divLine = document.createElement('div');
-      divLine.innerHTML = '<span style="color:var(--dim);">─────────────────────────────</span>';
-      socInfo.appendChild(header);
-      socInfo.appendChild(divLine);
-      const links = [
-        { key: 'LinkedIn', url: 'https://www.linkedin.com/in/marc-valbuena/', label: 'linkedin.com/in/marc-valbuena' },
-      ];
-      for (const lk of links) {
-        const row = document.createElement('div');
-        row.innerHTML = `<span style="color:var(--cyan);">${lk.key.padEnd(10)}</span><span style="color:var(--dim);"> : </span><a href="${lk.url}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--blue)'">${lk.label}</a>`;
-        socInfo.appendChild(row);
-      }
-      const wrap = document.createElement('div');
-      wrap.className = 'line text';
-      wrap.appendChild(socInfo);
-      ins(wrap);
       addBlank();
       return;
     }
@@ -932,8 +849,28 @@
 
     if (cmd === 'cat') {
       const dirNode = getNode(cwd);
-      if (dirNode && dirNode.contents[arg1] && dirNode.contents[arg1].type === 'file') {
-        const filePath = dirNode.contents[arg1].path;
+      const fileNode = dirNode && dirNode.contents[arg1];
+      if (!arg1) { addTextLine('cat: missing operand', 'error'); return; }
+      if (!fileNode) { addTextLine(`cat: ${arg1}: No such file or directory`, 'error'); return; }
+
+      if (fileNode.type === 'txt') {
+        // render as a text file — Hall of Fame style
+        addBlank();
+        addHtmlLine(`<span class="info"># ${escapeHtml(arg1)}</span>`);
+        addHtmlLine('<span class="muted">── Hall of Fame & CVD Acknowledgements ─────────────</span>');
+        addBlank();
+        for (const r of fileNode.content) {
+          const d = document.createElement('div');
+          d.className = 'line text';
+          d.innerHTML = `  <span class="highlight">[${r.org.padEnd(6)}]</span>  <a href="${r.url}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;transition:color 0.15s;" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--blue)'">${r.label}</a>  <span class="muted">— Hall of Fame</span>`;
+          ins(d);
+        }
+        addBlank();
+        return;
+      }
+
+      if (fileNode.type === 'file') {
+        const filePath = fileNode.path;
         if (/^https?:\/\//i.test(filePath)) {
           if (isSafeUrl(filePath)) {
             addHtmlLine(`Opening <span class="command">${escapeHtml(arg1)}</span>…`, 'info');
@@ -944,9 +881,10 @@
         } else {
           showOverlay(filePath, arg1);
         }
-      } else {
-        addTextLine(`cat: ${arg1}: No such file`, 'error');
+        return;
       }
+
+      addTextLine(`cat: ${arg1}: Is a directory`, 'error');
       return;
     }
 
