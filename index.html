@@ -3,8 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- Security headers via meta where HTTP headers are unavailable -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+                 font-src  https://fonts.gstatic.com;
+                 script-src 'unsafe-inline';
+                 connect-src 'none';
+                 img-src 'self' data:;
+                 object-src 'none';
+                 base-uri 'self';
+                 form-action 'none';">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="Referrer-Policy" content="no-referrer">
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
   <title>r00t@parrot:~$ Marc Valbuena</title>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Fira+Code:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjE4IiBmaWxsPSIjMGQwZjE0Ii8+CiAgPHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9Ijg0IiBoZWlnaHQ9Ijg0IiByeD0iMTIiIGZpbGw9IiM3YWZmMDAiLz4KICA8cG9seWxpbmUgcG9pbnRzPSIxOCwzOCAzNiw1MCAxOCw2MiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMGQwZjE0IiBzdHJva2Utd2lkdGg9IjkiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxsaW5lIHgxPSI0MiIgeTE9IjYyIiB4Mj0iODAiIHkyPSI2MiIgc3Ryb2tlPSIjMGQwZjE0IiBzdHJva2Utd2lkdGg9IjkiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4=">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Fira+Code:wght@300;400;600&display=swap" rel="stylesheet" crossorigin="anonymous" referrerpolicy="no-referrer">
   <style>
     :root {
       --bg:        #0d0f14;
@@ -393,13 +408,16 @@
       20%,24%,55% { opacity:0.4; }
     }
     #window-wrap { animation: wAppear 0.5s ease 4.1s forwards, flicker 0.25s ease 4.1s; }
+    /* recognition links — hover handled via CSS, not inline JS */
+    a.rec-link { color: var(--blue); text-decoration: none; transition: color 0.15s; }
+    a.rec-link:hover { color: var(--cyan); }
   </style>
 </head>
 <body>
 
 <!-- ══ BOOT SCREEN ══ -->
 <div id="boot">
-  <div class="boot-line info">MarcOS 6.3 (Lorikeet) — Linux 6.6.9-amd69</div>
+  <div class="boot-line info">marcOS Pro 6.9 — Linux 5.12.13-amd69</div>
   <div class="boot-line ok">  [  OK  ] Reached target Basic System</div>
   <div class="boot-line ok">  [  OK  ] Started Cryptography Setup</div>
   <div class="boot-line ok">  [  OK  ] Started Network Manager</div>
@@ -430,7 +448,7 @@
   <!-- Tab bar -->
   <div class="tabbar">
     <div class="tab active">bash — marc@safe: ~</div>
-    <div class="tab" onclick="window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ','_blank','noopener,noreferrer')">+</div>
+    <div class="tab" onclick="handleCommand('clear')">+</div>
   </div>
 
   <!-- Terminal output area -->
@@ -454,7 +472,7 @@
 
     <!-- Input block -->
     <div id="input-block">
-      <pre class="prompt-block" id="live-prompt"><span class="p-user">┌──(guestuser@safe)-[</span><span class="p-path" id="cwd-display">~</span><span class="p-user">]</span>
+      <pre class="prompt-block" id="live-prompt"><span class="p-user">┌──(marc@safe)-[</span><span class="p-path" id="cwd-display">~</span><span class="p-user">]</span>
 <span class="p-arrow">└─$ </span><input type="text" id="input" class="terminal-input" autocomplete="off" autofocus spellcheck="false" /></pre>
     </div>
   </div>
@@ -462,495 +480,472 @@
   <!-- Status bar -->
   <div class="statusbar">
     <div class="sb-item"><div class="sb-dot"></div><span class="sb-key">STATUS:</span> ONLINE</div>
-    <div class="sb-item"><span class="sb-key">OS:</span> Parrot 6.9 (Lorikeet)</div>
-    <div class="sb-item"><span class="sb-key">KERNEL:</span> 6.6.9-amd69</div>
+    <div class="sb-item"><span class="sb-key">OS:</span> marcOS Pro 6.9</div>
+    <div class="sb-item"><span class="sb-key">KERNEL:</span> 5.12.13-amd69</div>
     <div class="sb-item"><span class="sb-key">SHELL:</span> bash 5.12.13</div>
     <div class="sb-item" id="sb-time"></div>
   </div>
 
 </div>
 
-<!-- ══ SCRIPT ══ -->
+<!-- © Marc Valbuena · marcOS Portfolio Terminal · Unauthorized copying or redistribution prohibited -->
 <script>
-  // ── clock ──
-  function updateClock() {
-    const el = document.getElementById('sb-time');
-    if (!el) return;
+/*
+ * marcOS Portfolio Terminal
+ * Author : Marc Valbuena
+ * Contact: marcelinvalbuena@gmail.com
+ * License: All rights reserved. Do not copy, redistribute, or repurpose
+ *          this code without explicit written permission from the author.
+ */
+
+// ── right-click & selection guard ──────────────────────────────────────────
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('selectstart', e => e.preventDefault());
+document.addEventListener('dragstart',   e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && ['u','s','a','c'].includes(e.key.toLowerCase())) e.preventDefault();
+});
+
+// ── live clock ─────────────────────────────────────────────────────────────
+(function _clock() {
+  const _tick = () => {
+    const $t = document.getElementById('sb-time');
+    if (!$t) { clearInterval(_clockId); return; }
     const now = new Date();
-    el.innerHTML = `<span class="sb-key">TIME:</span> ${now.toLocaleTimeString('en-US',{hour12:false})}`;
-  }
-  setInterval(updateClock, 1000);
-  updateClock();
+    // Use textContent for static label, only set innerHTML for trusted clock output
+    $t.innerHTML = `<span class="sb-key">TIME:</span> ${now.toLocaleTimeString('en-US',{hour12:false})}`;
+  };
+  _tick();
+  const _clockId = setInterval(_tick, 1000);
+})();
 
-  // ── helpers ──
-  function escapeHtml(text) {
-    if (text == null) return '';
-    return String(text).replace(/[&<>"'`]/g, c =>
-      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])
-    );
-  }
-  function isSafeUrl(u) {
-    try { const p = new URL(u).protocol; return p==='http:'||p==='https:'; }
-    catch { return false; }
-  }
+// ── utilities ──────────────────────────────────────────────────────────────
+const _esc = t => t == null ? '' : String(t).replace(/[&<>"'`]/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c]));
 
-  // ── DOM refs ──
-  const terminal  = document.getElementById('terminal');
-  const inputBlock= document.getElementById('input-block');
+const _validLink = u => { try { const p = new URL(u).protocol; return p==='http:'||p==='https:'; } catch { return false; } };
 
-  // ── insert helpers ──
-  function ins(node) { terminal.insertBefore(node, inputBlock); terminal.scrollTop = terminal.scrollHeight; }
+const _b64 = s => atob(s); // decode stored paths
 
-  function addTextLine(text, cls='text') {
-    const d = document.createElement('div');
-    d.className = 'line ' + cls;
-    d.textContent = text;
-    ins(d);
-  }
+// ── DOM handles ────────────────────────────────────────────────────────────
+const $screen   = document.getElementById('terminal');
+const $inputRow = document.getElementById('input-block');
+const $cwdLabel = document.getElementById('cwd-display');
 
-  function addHtmlLine(html, cls='text') {
-    const d = document.createElement('div');
-    d.className = 'line ' + cls;
-    d.innerHTML = html;
-    ins(d);
-  }
+// ── output helpers ─────────────────────────────────────────────────────────
+const _push = node => {
+  $screen.insertBefore(node, $inputRow);
+  $screen.scrollTop = $screen.scrollHeight;
+};
 
-  function addNode(node) { ins(node); }
+const _line = (txt, cls = 'text') => {
+  const el = document.createElement('div');
+  el.className = `line ${cls}`;
+  el.textContent = txt;
+  _push(el);
+};
 
-  function addBlank() { addHtmlLine('&nbsp;'); }
+const _markup = (html, cls = 'text') => {
+  const el = document.createElement('div');
+  el.className = `line ${cls}`;
+  el.innerHTML = html;
+  _push(el);
+};
 
-  // ── virtual FS ──
-  const fs = {
-    "~": {
-      type: "dir",
-      contents: {
-        "recognitions.txt": {
-          type: "txt",
-          content: [
-            { org: "UN",     label: "United Nations", url: "https://unite.un.org/en/un-information-security-hall-fame" },
-            { org: 'WHO',    label: "WHO",            url: "https://www.who.int/about/cybersecurity/vulnerability-hall-of-fame/ethical-hacker-list"  },
-            { org: "UNESCO", label: "UNESCO",          url: "https://www.unesco.org/en/vulnerability-disclosure" },
-            { org: "UNICEF", label: "UNICEF",          url: "https://www.unicef.org/digitalimpact/unicef-information-security-hall-fame" },
-            { org: "Achmea", label: "Achmea",          url: "https://www.achmea.nl/en/responsible-disclosure/hall-of-fame" },
-            { org: "Nokia",  label: "Nokia",           url: "https://www.nokia.com/we-are-nokia/security/products/cvd/hall-of-fame/" },
-            { org: "US DoE",  label: "US Department of Education",           url: "https://www.ed.gov/about/ed-overview/required-notices/vulnerability-disclosure-policy" },
-          ]
-        },
-        "certificates": {
-          type: "dir",
-          contents: {
-            "CAPen.jpg": {
-              type: "file",
-              path: "https://candidate.speedexam.net/certificate.aspx?SSTATE=am4131EniU8ntjp4bO5mXbT4QdB5o91LpQ/Yi+17iUMoiYvdyLHdG0zeG0qEGvDKzqoWHXVdxHihM0uBjNs1lNf+aS4XYOkn8yDBz7nKzvc="
-            },
-            "CNPen.jpg": {
-              type: "file",
-              path: "https://candidate.speedexam.net/certificate.aspx?SSTATE=am4131EniU8ntjp4bO5mXblY3DeZ9H+GglTpJlSwv1LOhpqBQXy4c2xDbhjjyOcdewBBT3bTOx4PeFoUnwfKwm8du0GL//WpnEutcmi3Z/s="
-            },
-            "CRTA.jpg": {
-              type: "file",
-              path: "https://labs.cyberwarfare.live/credential/achievement/68a43a53f4c7625a2950ffdd"
-            },
-            "CWES.jpg": {
-              type: "file",
-              path: "https://www.credly.com/badges/1d68c171-351b-4c73-a5c4-86f467de8303/public_url"
-            }
-          }
+const _gap = () => _markup('&nbsp;');
+
+// ── virtual filesystem ─────────────────────────────────────────────────────
+// Cert URLs are base64-encoded to discourage scraping
+const _vfs = {
+  "~": {
+    kind: "dir",
+    nodes: {
+      "recognitions.txt": {
+        kind: "txt",
+        rows: [
+          { tag: "Achmea", display: "Achmea",                   ref: "aHR0cHM6Ly93d3cuYWNobWVhLm5sL2VuL3Jlc3BvbnNpYmxlLWRpc2Nsb3N1cmUvaGFsbC1vZi1mYW1l" },
+          { tag: "Nokia",  display: "Nokia",                    ref: "aHR0cHM6Ly93d3cubm9raWEuY29tL3dlLWFyZS1ub2tpYS9zZWN1cml0eS9wcm9kdWN0cy9jdmQvaGFsbC1vZi1mYW1lLw==" },
+          { tag: "UN",     display: "United Nations",           ref: "aHR0cHM6Ly91bml0ZS51bi5vcmcvZW4vdW4taW5mb3JtYXRpb24tc2VjdXJpdHktaGFsbC1mYW1l" },
+          { tag: "UNESCO", display: "UNESCO",                   ref: "aHR0cHM6Ly93d3cudW5lc2NvLm9yZy9lbi92dWxuZXJhYmlsaXR5LWRpc2Nsb3N1cmU=" },
+          { tag: "UNICEF", display: "UNICEF",                   ref: "aHR0cHM6Ly93d3cudW5pY2VmLm9yZy9kaWdpdGFsaW1wYWN0L3VuaWNlZi1pbmZvcm1hdGlvbi1zZWN1cml0eS1oYWxsLWZhbWU=" },
+          { tag: "US DoE", display: "US Dept of Education",     ref: "aHR0cHM6Ly93d3cuZWQuZ292L2Fib3V0L2VkLW92ZXJ2aWV3L3JlcXVpcmVkLW5vdGljZXMvdnVsbmVyYWJpbGl0eS1kaXNjbG9zdXJlLXBvbGljeQ==" },
+          { tag: "WHO",    display: "WHO",                      ref: "aHR0cHM6Ly93d3cud2hvLmludC9hYm91dC9jeWJlcnNlY3VyaXR5L3Z1bG5lcmFiaWxpdHktaGFsbC1vZi1mYW1lL2V0aGljYWwtaGFja2VyLWxpc3Q=" },
+        ]
+      },
+      "certificates": {
+        kind: "dir",
+        nodes: {
+          "CAPen.jpg": { kind: "link", ref: "aHR0cHM6Ly9jYW5kaWRhdGUuc3BlZWRleGFtLm5ldC9jZXJ0aWZpY2F0ZS5hc3B4P1NTVEFURT1hbTQxMzFFbmlVOG50anA0Yk81bVhiVDRRZEI1bzkxTHBRL1lpKzE3aVVNb2lZdmR5TEhkRzB6ZUcwcUVHdkRLenFvV0hYVmR4SGloTTB1QmpOczFsTmYrYVM0WFlPa244eURCejduS3p2Yz0=" },
+          "CNPen.jpg": { kind: "link", ref: "aHR0cHM6Ly9jYW5kaWRhdGUuc3BlZWRleGFtLm5ldC9jZXJ0aWZpY2F0ZS5hc3B4P1NTVEFURT1hbTQxMzFFbmlVOG50anA0Yk81bVhibFkzRGVaOUgrR2dsVHBKbFN3djFMT2hwcUJRWHk0YzJ4RGJoamp5T2NkZXdCQlQzYlRPeDRQZUZvVW53Zkt3bThkdTBHTC8vV3BuRXV0Y21pM1ovcz0=" },
+          "CRTA.jpg":  { kind: "link", ref: "aHR0cHM6Ly9sYWJzLmN5YmVyd2FyZmFyZS5saXZlL2NyZWRlbnRpYWwvYWNoaWV2ZW1lbnQvNjhhNDNhNTNmNGM3NjI1YTI5NTBmZmRk" },
+          "CWES.jpg":  { kind: "link", ref: "aHR0cHM6Ly93d3cuY3JlZGx5LmNvbS9iYWRnZXMvMWQ2OGMxNzEtMzUxYi00YzczLWE1YzQtODZmNDY3ZGU4MzAzL3B1YmxpY191cmw=" },
         }
       }
     }
-  };
-
-  let cwd = "~";
-
-  function getNode(path) {
-    if (path === "~") return fs["~"];
-    const parts = path.replace(/^~\//, '').split('/');
-    let node = fs["~"];
-    for (const p of parts) {
-      if (!node || node.type !== 'dir' || !node.contents[p]) return null;
-      node = node.contents[p];
-    }
-    return node;
   }
+};
 
-  function resolvePath(dir) {
-    if (!dir || dir === "~") return "~";
-    if (dir === ".") return cwd;
-    if (dir === "..") {
-      if (cwd === "~") return "~";
-      const a = cwd.split("/"); a.pop();
-      return a.join("/") || "~";
-    }
-    const newPath = (cwd === "~") ? `~/${dir}` : `${cwd}/${dir}`;
-    const node = getNode(newPath);
-    return (node && node.type === 'dir') ? newPath : null;
+// ── filesystem navigation ──────────────────────────────────────────────────
+let _cwd = "~";
+
+const _walk = loc => {
+  if (loc === "~") return _vfs["~"];
+  const segs = loc.replace(/^~\//, '').split('/');
+  let cur = _vfs["~"];
+  for (const s of segs) {
+    if (!cur || cur.kind !== 'dir' || !cur.nodes[s]) return null;
+    cur = cur.nodes[s];
   }
+  return cur;
+};
 
-  // ── autocomplete ──
-  function getCompletions(partial) {
-    const node = getNode(cwd);
-    if (!node || node.type !== 'dir') return [];
-    return Object.keys(node.contents).filter(k => k.toLowerCase().startsWith(partial.toLowerCase()));
+const _resolve = target => {
+  if (!target || target === "~") return "~";
+  if (target === ".") return _cwd;
+  if (target === "..") {
+    if (_cwd === "~") return "~";
+    const parts = _cwd.split("/"); parts.pop();
+    return parts.join("/") || "~";
   }
+  const next = (_cwd === "~") ? `~/${target}` : `${_cwd}/${target}`;
+  const node = _walk(next);
+  return (node && node.kind === 'dir') ? next : null;
+};
 
-  // ── render prompt history ──
-  function renderPromptHistory(cmd) {
-    const pre = document.createElement('pre');
-    pre.className = 'prompt-block';
-    pre.innerHTML =
-      `<span class="p-user">┌──(guestuser@safe)-[${escapeHtml(cwd)}]</span>\n<span class="p-arrow">└─$ </span>`;
-    const t = document.createTextNode(cmd);
-    pre.appendChild(t);
-    const block = document.createElement('div');
-    block.className = 'command-block';
-    block.appendChild(pre);
-    ins(block);
-  }
+const _suggest = partial => {
+  const here = _walk(_cwd);
+  if (!here || here.kind !== 'dir') return [];
+  return Object.keys(here.nodes).filter(k => k.toLowerCase().startsWith(partial.toLowerCase()));
+};
 
-  // ── update prompt ──
-  function updatePrompt() {
-    const livePrompt = document.getElementById('live-prompt');
-    if (livePrompt) {
-      livePrompt.innerHTML =
-        `<span class="p-user">┌──(guestuser@safe)-[${escapeHtml(cwd)}]</span>\n<span class="p-arrow">└─$ </span><input type="text" id="input" class="terminal-input" autocomplete="off" spellcheck="false" />`;
-      const newInp = document.getElementById('input');
-      if (newInp) { newInp.focus(); bindInput(newInp); }
-    }
-  }
+// ── prompt rendering ───────────────────────────────────────────────────────
+const _historyPrompt = input => {
+  const pre = document.createElement('pre');
+  pre.className = 'prompt-block';
+  pre.innerHTML = `<span class="p-user">┌──(marc@safe)-[${_esc(_cwd)}]\n└─$ </span>`;
+  pre.appendChild(document.createTextNode(input));
+  const wrap = document.createElement('div');
+  wrap.className = 'command-block';
+  wrap.appendChild(pre);
+  _push(wrap);
+};
 
-  // ── overlay ──
-  function showOverlay(filePath, name) {
-    if (/^https?:\/\//i.test(filePath) && !isSafeUrl(filePath)) {
-      addTextLine('cat: refused to open unsafe URL', 'error');
-      return;
-    }
-    const overlay = document.createElement('div');
-    overlay.className = 'overlay';
+const _refreshPrompt = () => {
+  const lp = document.getElementById('live-prompt');
+  if (!lp) return;
+  lp.innerHTML = `<span class="p-user">┌──(marc@safe)-[${_esc(_cwd)}]\n└─$ </span><input type="text" id="input" class="terminal-input" autocomplete="off" spellcheck="false" />`;
+  const fresh = document.getElementById('input');
+  if (fresh) { fresh.focus(); _attachInput(fresh); }
+  if ($cwdLabel) $cwdLabel.textContent = _cwd;
+};
 
-    const box = document.createElement('div');
-    box.className = 'overlay-box';
+// ── bio content ───────────────────────────────────────────────────────────
+const _bio = [
+  "Hi, I'm Marc Valbuena — a cybersecurity enthusiast passionate about building a safer and more transparent digital world.",
+  "For the past 10 years, I've been immersed in Information Security, specializing in offensive security across web applications, networks, mobile apps, and APIs. My approach is rooted in ethical, non-intrusive research and responsible disclosure — helping organizations identify vulnerabilities before they become real threats.",
+  "I don't just find problems — I aim to provide clarity, actionable insights, and real-world solutions that strengthen security from the inside out.",
+  "Outside of cybersecurity, I'm a gamer by curiosity, and a photographer by perspective. I enjoy blending technical thinking with creativity, always exploring new ideas and challenges.",
+  "If you're interested in collaborating, improving security, or just having a great conversation — feel free to reach out.",
+];
 
-    const header = document.createElement('div');
-    header.className = 'overlay-header';
-    header.innerHTML = `<span>📄 ${escapeHtml(name)}</span>`;
+// ── command registry ───────────────────────────────────────────────────────
+const _cmds = [
+  { label: 'whoami',      hint: 'About me' },
+  { label: 'neofetch',    hint: 'System & operator info' },
+  { label: 'ls',          hint: 'List current directory' },
+  { label: 'cd [dir]',    hint: 'Change directory',       _dirArg: true },
+  { label: 'pwd',         hint: 'Print working directory' },
+  { label: 'cat [file]',  hint: 'Open file or certificate', _fileArg: true },
+  { label: 'clear',       hint: 'Clear terminal' },
+];
 
-    const closeBtn = document.createElement('div');
-    closeBtn.className = 'overlay-close';
-    closeBtn.textContent = '✕ close';
-    closeBtn.onclick = () => overlay.remove();
-    header.appendChild(closeBtn);
+// ── neofetch logo ──────────────────────────────────────────────────────────
+const _logoLines = [
+  '                                                   ',
+  '                .+##%%%*.                         ',
+  '            .+%%%%%%%%%%%+-                       ',
+  '        ..+%#########%%%%#%%%%+..                 ',
+  '       =%%%%%%#########%%%##%%%%=                 ',
+  '      .%@@@@@@@@@@%%####%@%%%%%#.                 ',
+  '     .%%@@@@@@@@@@@@@@%%%@@%%@%%.                 ',
+  '     =%%%+=-------=+**%@@%@@@@%@+                 ',
+  '     %%%=---::::::::::-=*=-=+=#%@:                ',
+  '    :@%+=---::::::::::::::---==%@=                ',
+  '    .@%==----::::::::::::----==*@=                ',
+  '    .@#==+#####+------=*####*==+@=                ',
+  '    .@+==------=------==-----==+%=                ',
+  '  ...%+==+*#%%+==----===#%%#+==+#-..              ',
+  '  ..+=+==-=%@@#-=--:-==*@@@*:-=++=-               ',
+  '    -++==-::::::--:::-::::::-==++=.               ',
+  '  ..:=++=--::::::----:::::::-==++-.               ',
+  ' ::::::::::::::::::::::::::::::::::::.             ',
+  ' ------------------------------------.             ',
+  ' ------------------------------------.             ',
+  ' ------------------------------------              ',
+  ' -===--------------------------------             ',
+  ' -============-----------------------             ',
+  ' :===============--::-==------------:             ',
+  ' :================---==========-----:             ',
+  ' -==================================:             ',
+  ':-+==================================:            ',
+  '.--+=================================--.          ',
+  '---+++++++++++++++++++++============+--:          ',
+];
 
-    const img = document.createElement('img');
-    img.src = filePath;
-    img.alt = name;
-    img.onerror = () => {
-      // If image fails, it's probably a URL to open
-      overlay.remove();
-      window.open(filePath, '_blank', 'noopener,noreferrer');
-    };
+// ── command dispatcher ─────────────────────────────────────────────────────
+function handleCommand(raw) {
+  const tokens = raw.trim().split(/\s+/);
+  const verb   = tokens[0].toLowerCase();
+  const arg    = tokens[1] || "";
 
-    box.appendChild(header);
-    box.appendChild(img);
-    overlay.appendChild(box);
-    overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
-    document.body.appendChild(overlay);
-  }
+  switch (verb) {
 
-  // ── commands data ──
-  const whoamiParagraphs = [
-    "Hi, I'm Marc Valbuena — a cybersecurity enthusiast passionate about building a safer and more transparent digital world.",
-    "For the past 10 years, I've been immersed in Information Security, specializing in offensive security across web applications, networks, mobile apps, and APIs. My approach is rooted in ethical, non-intrusive research and responsible disclosure — helping organizations identify vulnerabilities before they become real threats.",
-    "I don't just find problems — I aim to provide clarity, actionable insights, and real-world solutions that strengthen security from the inside out.",
-    "Outside of cybersecurity, I'm a gamer by curiosity, and a photographer by perspective. I enjoy blending technical thinking with creativity, always exploring new ideas and challenges.",
-    "If you're interested in collaborating, improving security, or just having a great conversation — feel free to reach out.",
-  ];
-
-  const helpItems = [
-    { cmd: 'whoami',       desc: 'About me' },
-    { cmd: 'neofetch',     desc: 'System & operator info' },
-    { cmd: 'ls',           desc: 'List current directory' },
-    { cmd: 'cd [dir]',     desc: 'Change directory' },
-    { cmd: 'pwd',          desc: 'Print working directory' },
-    { cmd: 'cat [file]',   desc: 'Open file or certificate' },
-    { cmd: 'clear',        desc: 'Clear terminal' },
-  ];
-
-  const startTime = Date.now();
-
-  // ── command handler ──
-  function handleCommand(rawValue) {
-    const parts = rawValue.trim().split(/\s+/);
-    const cmd  = parts[0].toLowerCase();
-    const arg1 = parts[1] || "";
-
-    if (cmd === 'clear') {
+    case 'clear':
       document.querySelectorAll('.command-block, .line').forEach(el => {
         if (el.id === 'ascii-art' || el.id === 'instructions') return;
         el.remove();
       });
-      return;
+      break;
+
+    case 'help': {
+      _gap();
+      _markup('<span class="info">Available commands</span>');
+      _markup('<span class="muted">─────────────────────────────────────────</span>');
+      const tbl = document.createElement('table');
+      tbl.className = 'help-table';
+      _cmds.forEach(entry => {
+        const row = tbl.insertRow();
+        const c1  = row.insertCell();
+        const c2  = row.insertCell();
+        c1.innerHTML = entry._dirArg
+          ? `<span class="command">cd</span> <span class="directory">[dir]</span>`
+          : entry._fileArg
+          ? `<span class="command">cat</span> <span class="highlight">[file]</span>`
+          : `<span class="command">${_esc(entry.label)}</span>`;
+        c2.style.color = 'var(--dim)';
+        c2.textContent = `— ${entry.hint}`;
+      });
+      const wrapper = document.createElement('div');
+      wrapper.className = 'line text';
+      wrapper.appendChild(tbl);
+      _push(wrapper);
+      _gap();
+      break;
     }
 
-    if (cmd === 'help') {
-      addBlank();
-      addHtmlLine('<span class="info">Available commands</span>', 'text');
-      addHtmlLine('<span class="muted">─────────────────────────────────────────</span>', 'text');
-      const table = document.createElement('table');
-      table.className = 'help-table';
-      for (const item of helpItems) {
-        const tr = document.createElement('tr');
-        const td1 = document.createElement('td');
-        const td2 = document.createElement('td');
-        td1.innerHTML = `<span class="command">${escapeHtml(item.cmd)}</span>`;
-        td2.style.color = 'var(--dim)';
-        td2.textContent = '— ' + item.desc;
-        tr.appendChild(td1); tr.appendChild(td2);
-        table.appendChild(tr);
-      }
-      const wrap = document.createElement('div');
-      wrap.className = 'line text';
-      wrap.appendChild(table);
-      ins(wrap);
-      addBlank();
-      return;
+    case 'whoami': {
+      _gap();
+      _markup('<span class="info">// About Me</span>');
+      _markup('<span class="muted">─────────────────────────────────────────</span>');
+      _bio.forEach(p => {
+        const el = document.createElement('div');
+        el.className = 'line text';
+        el.style.cssText = 'text-align:justify;text-justify:inter-word;max-width:72ch;line-height:1.75;margin:4px 0;';
+        el.textContent = p;
+        _push(el);
+        _gap();
+      });
+      break;
     }
 
-    if (cmd === 'whoami') {
-      addBlank();
-      addHtmlLine('<span class="info">// About Me</span>');
-      addHtmlLine('<span class="muted">─────────────────────────────────────────</span>');
-      for (const para of whoamiParagraphs) {
-        const d = document.createElement('div');
-        d.className = 'line text';
-        d.style.cssText = 'text-align:justify;text-justify:inter-word;max-width:72ch;line-height:1.75;margin:4px 0;';
-        d.textContent = para;
-        ins(d);
-        addBlank();
-      }
-      return;
-    }
+    case 'neofetch': {
+      _gap();
+      const block = document.createElement('div');
+      block.className = 'line text';
+      block.style.cssText = 'display:flex;gap:28px;align-items:flex-start;';
 
-    if (cmd === 'neofetch') {
-      addBlank();
-      const nf = document.createElement('div');
-      nf.className = 'line text';
-      nf.style.display = 'flex';
-      nf.style.gap = '28px';
-      nf.style.alignItems = 'flex-start';
+      const logo = document.createElement('pre');
+      logo.style.cssText = 'color:var(--cyan);text-shadow:var(--glow-c);font-size:0.48rem;line-height:1.25;flex-shrink:0;letter-spacing:0.01em;opacity:0.85;';
+      logo.textContent = _logoLines.join('\n');
 
-      // ASCII portrait (left column) — parrot logo
-      const asciiLines = [
-       '                                                   ',
-        '                .+##%%%*.                         ',
-        '            .+%%%%%%%%%%%+-                       ',
-        '        ..+%#########%%%%#%%%%+..                 ',
-        '       =%%%%%%#########%%%##%%%%=                 ',
-        '      .%@@@@@@@@@@%%####%@%%%%%#.                 ',
-        '     .%%@@@@@@@@@@@@@@%%%@@%%@%%.                 ',
-        '     =%%%+=-------=+**%@@%@@@@%@+                 ',
-        '     %%%=---::::::::::-=*=-=+=#%@:                ',
-        '    :@%+=---::::::::::::::---==%@=                ',
-        '    .@%==----::::::::::::----==*@=                ',
-        '    .@#==+#####+------=*####*==+@=                ',
-        '    .@+==------=------==-----==+%=                ',
-        '  ...%+==+*#%%+==----===#%%#+==+#-..              ',
-        '  ..+=+==-=%@@#-=--:-==*@@@*:-=++=-               ',
-        '    -++==-::::::--:::-::::::-==++=.               ',
-        '  ..:=++=--::::::----:::::::-==++-.               ',
-        ' ::::::::::::::::::::::::::::::::::::.             ',
-        ' ------------------------------------.             ',
-        ' ------------------------------------.             ',
-        ' ------------------------------------              ',
-        ' -===--------------------------------             ',
-        ' -============-----------------------             ',
-        ' :===============--::-==------------:             ',
-        ' :================---==========-----:             ',
-        ' -==================================:             ',
-        ':-+==================================:            ',
-        '.--+=================================--.          ',
-        '---+++++++++++++++++++++============+--:          ',
-      ];
-      const portrait = document.createElement('pre');
-      portrait.style.cssText = 'color:var(--cyan);text-shadow:var(--glow-c);font-size:0.48rem;line-height:1.25;flex-shrink:0;letter-spacing:0.01em;opacity:0.85;';
-      portrait.textContent = asciiLines.join('\n');
+      const panel = document.createElement('div');
+      panel.style.cssText = 'font-size:0.79rem;line-height:1.8;padding-top:4px;';
 
-      // info rows (right column)
-      const info = document.createElement('div');
-      info.style.cssText = 'font-size:0.79rem;line-height:1.8;padding-top:4px;';
-      const rows = [
+      const _nfRows = [
         ['<span style="color:var(--green);font-weight:700;">marc</span><span style="color:var(--white);">@</span><span style="color:var(--cyan);font-weight:700;">safe</span>', ''],
         ['─────────────────────────────', ''],
-        ['<span style="color:var(--cyan);">Name</span>',       'Marc Valbuena'],
-        ['<span style="color:var(--cyan);">OS</span>',   'MarcOS Pro'],
-        ['<span style="color:var(--cyan);">Shell</span>',    'bash (Pls don’t!)'],
-        ['<span style="color:var(--cyan);">Terminal</span>', 'Portfolio Terminal v1.0.0'],
-        ['<span style="color:var(--cyan);">Role</span>',     'Penetration Tester / Bug Hunter'],
+        ['<span style="color:var(--cyan);">Name</span>',     'Marc Valbuena'],
+        ['<span style="color:var(--cyan);">OS</span>',       'marcOS Pro 6.9'],
+        ['<span style="color:var(--cyan);">Shell</span>',    "bash (Pls don't!)"],
+        ['<span style="color:var(--cyan);">Terminal</span>', 'Cubao Terminal v1.0.0'],
+        ['<span style="color:var(--cyan);">Role</span>',     'Penetration Tester · Bug Hunter · Security Researcher'],
         ['<span style="color:var(--cyan);">Focus</span>',    'Offensive Security · OSINT · CVD · Threat Modeling'],
         ['<span style="color:var(--cyan);">Tools</span>',    'Burp Suite · Metasploit · Nmap · OWASPZAP · SQLMap'],
         ['<span style="color:var(--cyan);">Email</span>',    'marcelinvalbuena@gmail.com'],
         ['<span style="color:var(--cyan);">LinkedIn</span>', '<a href="https://www.linkedin.com/in/marc-valbuena/" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;">linkedin.com/in/marc-valbuena</a>'],
         ['─────────────────────────────', ''],
       ];
-      for (const [key, val] of rows) {
-        const row = document.createElement('div');
-        if (val === '') { row.innerHTML = key; }
-        else { row.innerHTML = `${key}<span style="color:var(--dim);"> : </span>${val}`; }
-        info.appendChild(row);
-      }
-      // colour palette dots
-      const palette = document.createElement('div');
-      palette.style.cssText = 'display:flex;gap:6px;margin-top:4px;';
-      const colours = ['#ff4f6e','#ffb347','#7aff00','#00e5ff','#4fa3ff','#c678dd','#e0e6f0','#6b7280'];
-      for (const c of colours) {
-        const dot = document.createElement('div');
-        dot.style.cssText = `width:14px;height:14px;border-radius:50%;background:${c};`;
-        palette.appendChild(dot);
-      }
-      info.appendChild(palette);
-
-      nf.appendChild(portrait);
-      nf.appendChild(info);
-      ins(nf);
-      addBlank();
-      return;
-    }
-
-    if (cmd === 'ls') {
-      const node = getNode(cwd);
-      if (!node || node.type !== 'dir') { addTextLine('ls: cannot access directory', 'error'); return; }
-      const items = Object.keys(node.contents).sort();
-      const wrap = document.createElement('div');
-      wrap.className = 'line text';
-      items.forEach((name, i) => {
-        const item = node.contents[name];
-        if (item.type === 'dir') {
-          const s = document.createElement('span');
-          s.className = 'directory';
-          s.textContent = name + '/';
-          wrap.appendChild(s);
-        } else {
-          wrap.appendChild(document.createTextNode(name));
-        }
-        if (i < items.length - 1) wrap.appendChild(document.createTextNode('   '));
+      _nfRows.forEach(([k, v]) => {
+        const r = document.createElement('div');
+        r.innerHTML = v === '' ? k : `${k}<span style="color:var(--dim);"> : </span>${v}`;
+        panel.appendChild(r);
       });
-      ins(wrap);
-      return;
+
+      const dots = document.createElement('div');
+      dots.style.cssText = 'display:flex;gap:6px;margin-top:4px;';
+      ['#ff4f6e','#ffb347','#7aff00','#00e5ff','#4fa3ff','#c678dd','#e0e6f0','#6b7280'].forEach(c => {
+        const d = document.createElement('div');
+        d.style.cssText = `width:14px;height:14px;border-radius:50%;background:${c};`;
+        dots.appendChild(d);
+      });
+      panel.appendChild(dots);
+
+      block.appendChild(logo);
+      block.appendChild(panel);
+      _push(block);
+      _gap();
+      break;
     }
 
-    if (cmd === 'cd') {
-      const newPath = resolvePath(arg1);
-      if (newPath) { cwd = newPath; updatePrompt(); }
-      else addTextLine(`cd: no such file or directory: ${arg1}`, 'error');
-      return;
-    }
-
-    if (cmd === 'pwd') { addTextLine(cwd); return; }
-
-    if (cmd === 'cat') {
-      const dirNode = getNode(cwd);
-      const fileNode = dirNode && dirNode.contents[arg1];
-      if (!arg1) { addTextLine('cat: missing operand', 'error'); return; }
-      if (!fileNode) { addTextLine(`cat: ${arg1}: No such file or directory`, 'error'); return; }
-
-      if (fileNode.type === 'txt') {
-        // render as a text file — Hall of Fame style
-        addBlank();
-        addHtmlLine(`<span class="info"># ${escapeHtml(arg1)}</span>`);
-        addHtmlLine('<span class="muted">── Hall of Fame & CVD Acknowledgements ─────────────</span>');
-        addBlank();
-        for (const r of fileNode.content) {
-          const d = document.createElement('div');
-          d.className = 'line text';
-          d.innerHTML = `  <span class="highlight">[${r.org.padEnd(6)}]</span>  <a href="${r.url}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;transition:color 0.15s;" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color='var(--blue)'">${r.label}</a>  <span class="muted">— Hall of Fame</span>`;
-          ins(d);
-        }
-        addBlank();
-        return;
-      }
-
-      if (fileNode.type === 'file') {
-        const filePath = fileNode.path;
-        if (/^https?:\/\//i.test(filePath)) {
-          if (isSafeUrl(filePath)) {
-            addHtmlLine(`Opening <span class="command">${escapeHtml(arg1)}</span>…`, 'info');
-            showOverlay(filePath, arg1);
-          } else {
-            addTextLine('cat: refused to open unsafe URL', 'error');
-          }
+    case 'ls': {
+      const here = _walk(_cwd);
+      if (!here || here.kind !== 'dir') { _line('ls: cannot access directory', 'error'); break; }
+      const row = document.createElement('div');
+      row.className = 'line text';
+      const entries = Object.keys(here.nodes).sort();
+      entries.forEach((name, i) => {
+        const node = here.nodes[name];
+        if (node.kind === 'dir') {
+          const span = document.createElement('span');
+          span.className = 'directory';
+          span.textContent = name;
+          row.appendChild(span);
         } else {
-          showOverlay(filePath, arg1);
+          row.appendChild(document.createTextNode(name));
         }
-        return;
-      }
-
-      addTextLine(`cat: ${arg1}: Is a directory`, 'error');
-      return;
+        if (i < entries.length - 1) row.appendChild(document.createTextNode('   '));
+      });
+      _push(row);
+      break;
     }
 
-    addHtmlLine(`<span class="error">${escapeHtml(cmd)}: command not found</span> — type <span class="command">help</span> for available commands`);
-  }
+    case 'cd': {
+      const dest = _resolve(arg);
+      if (dest) {
+        _cwd = dest;
+        _refreshPrompt();
+      } else {
+        _line(`cd: no such file or directory: ${_esc(arg)}`, 'error');
+      }
+      break;
+    }
 
-  // ── keep input focused at all times ──
-  function keepFocus() {
-    const inp = document.getElementById('input');
-    if (inp) inp.focus();
-  }
+    case 'pwd':
+      _line(_cwd);
+      break;
 
-  document.addEventListener('keydown', function(e) {
-    const inp = document.getElementById('input');
-    if (!inp) return;
-    if (document.activeElement && document.activeElement !== inp &&
-        (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
-    inp.focus();
-  });
+    case 'cat': {
+      if (!arg) { _line('cat: missing operand', 'error'); break; }
+      const here = _walk(_cwd);
+      const node = here && here.nodes[arg];
+      if (!node) { _line(`cat: ${_esc(arg)}: No such file or directory`, 'error'); break; }
 
-  // ── input binding ──
-  function bindInput(inp) {
-    inp.addEventListener('keydown', function(e) {
-      if (e.key === 'Tab') {
-        e.preventDefault();
-        const val = inp.value;
-        const parts = val.split(/\s+/);
-        if (parts.length >= 2) {
-          const partial = parts[parts.length - 1];
-          const completions = getCompletions(partial);
-          if (completions.length === 1) {
-            parts[parts.length - 1] = completions[0];
-            inp.value = parts.join(' ');
-          }
+      if (node.kind === 'txt') {
+        _gap();
+        _markup(`<span class="info"># ${_esc(arg)}</span>`);
+        _markup('<span class="muted">── CVD Acknowledgements ────────────────────────────</span>');
+        _gap();
+        node.rows.forEach(r => {
+          const el = document.createElement('div');
+          el.className = 'line text';
+          // Build safely — no inline event handlers, no unescaped interpolation
+          const bracket = document.createElement('span');
+          bracket.className = 'highlight';
+          bracket.textContent = `[${r.tag.padEnd(6)}]`;
+          const spacer = document.createTextNode('  ');
+          const anchor = document.createElement('a');
+          anchor.className = 'rec-link';
+          const _safeRef = _validLink(_b64(r.ref)) ? _b64(r.ref) : '#';
+          anchor.href = _safeRef;
+          anchor.target = '_blank';
+          anchor.rel = 'noopener noreferrer';
+          anchor.textContent = r.display;
+          el.appendChild(document.createTextNode('  '));
+          el.appendChild(bracket);
+          el.appendChild(spacer);
+          el.appendChild(anchor);
+          _push(el);
+        });
+        _gap();
+        break;
+      }
+
+      if (node.kind === 'link') {
+        const dest = _b64(node.ref);
+        if (_validLink(dest)) {
+          _markup(`Opening <span class="command">${_esc(arg)}</span>…`, 'info');
+          window.open(dest, '_blank', 'noopener,noreferrer');
+        } else {
+          _line('cat: refused to open unsafe resource', 'error');
         }
-        return;
+        break;
       }
 
-      if (e.key === 'Enter') {
-        const raw = inp.value || "";
-        const value = raw.trim();
-        if (!value) return;
-        renderPromptHistory(value);
-        handleCommand(value);
-        terminal.appendChild(inputBlock);
-        inp.value = '';
-        terminal.scrollTop = terminal.scrollHeight;
-        setTimeout(keepFocus, 0);
-      }
-    });
+      if (node.kind === 'dir') { _line(`cat: ${_esc(arg)}: Is a directory`, 'error'); break; }
+      break;
+    }
 
-    inp.addEventListener('blur', function() {
-      setTimeout(() => {
-        if (!document.querySelector('.overlay')) keepFocus();
-      }, 120);
-    });
+    default:
+      _markup(`<span class="error">${_esc(verb)}: command not found</span> — type <span class="command">help</span> for available commands`);
   }
+}
 
-  terminal.addEventListener('click', keepFocus);
+// ── focus management ───────────────────────────────────────────────────────
+const _refocus = () => {
+  const inp = document.getElementById('input');
+  if (inp) inp.focus();
+};
 
-  // ── init ──
-  (function init() {
-    const inp = document.getElementById('input');
-    if (inp) bindInput(inp);
-    keepFocus();
-  })();
+document.addEventListener('keydown', e => {
+  const inp = document.getElementById('input');
+  if (!inp) return;
+  const active = document.activeElement;
+  if (active && active !== inp && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+  inp.focus();
+});
+
+// ── input handler ──────────────────────────────────────────────────────────
+function _attachInput(inp) {
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const val   = inp.value;
+      const parts = val.split(/\s+/);
+      if (parts.length >= 2) {
+        const partial = parts[parts.length - 1];
+        const hits    = _suggest(partial);
+        if (hits.length === 1) { parts[parts.length - 1] = hits[0]; inp.value = parts.join(' '); }
+      }
+      return;
+    }
+    if (e.key === 'Enter') {
+      const raw = (inp.value || "").trim().slice(0, 256); // cap input length
+      if (!raw) return;
+      _historyPrompt(raw);
+      handleCommand(raw);
+      $screen.appendChild($inputRow);
+      inp.value = '';
+      $screen.scrollTop = $screen.scrollHeight;
+      setTimeout(_refocus, 0);
+    }
+  });
+  inp.addEventListener('blur', () => {
+    // Only refocus if the new active element is not a link or button
+    setTimeout(() => {
+      const active = document.activeElement;
+      if (!active || active.tagName === 'BODY' || active === inp) _refocus();
+    }, 150);
+  });
+}
+
+$screen.addEventListener('click', _refocus);
+
+// ── boot ───────────────────────────────────────────────────────────────────
+(function _boot() {
+  const inp = document.getElementById('input');
+  if (inp) _attachInput(inp);
+  _refocus();
+})();
 </script>
 </body>
 </html>
