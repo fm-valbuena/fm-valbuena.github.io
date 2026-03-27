@@ -9,7 +9,7 @@
                  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
                  font-src  https://fonts.gstatic.com;
                  script-src 'unsafe-inline';
-                 connect-src 'none';
+                 connect-src https://api.countapi.xyz;
                  img-src 'self' data:;
                  object-src 'none';
                  base-uri 'self';
@@ -417,7 +417,7 @@
 
 <!-- ══ BOOT SCREEN ══ -->
 <div id="boot">
-  <div class="boot-line info">marcOS Pro 6.9 — Linux 5.12.13-amd69</div>
+  <div class="boot-line info">marcOS Pro 6.9 — Minus 5.12.13-amd69</div>
   <div class="boot-line ok">  [  OK  ] Reached target Basic System</div>
   <div class="boot-line ok">  [  OK  ] Started Cryptography Setup</div>
   <div class="boot-line ok">  [  OK  ] Started Network Manager</div>
@@ -430,7 +430,7 @@
   <div class="boot-line ok">  [  OK  ] Started Wireshark Packet Capture</div>
   <div class="boot-line ok">  [  OK  ] Reached target Multi-User System</div>
   <div class="boot-line info">  Starting graphical session for marc@safe…</div>
-  <div class="boot-line ok">  [  OK  ] Session initialized — portfolio terminal ready</div>
+  <div class="boot-line ok">  [  OK  ] Session initialized — DUMB terminal ready</div>
 </div>
 
 <!-- ══ MAIN WINDOW ══ -->
@@ -480,9 +480,7 @@
   <!-- Status bar -->
   <div class="statusbar">
     <div class="sb-item"><div class="sb-dot"></div><span class="sb-key">STATUS:</span> ONLINE</div>
-    <div class="sb-item"><span class="sb-key">OS:</span> marcOS Pro 6.9</div>
-    <div class="sb-item"><span class="sb-key">KERNEL:</span> 5.12.13-amd69</div>
-    <div class="sb-item"><span class="sb-key">SHELL:</span> bash 5.12.13</div>
+    <div class="sb-item"><span class="sb-key">FREE SPACE:</span> <span id="sb-visits">0 B</span></div>
     <div class="sb-item" id="sb-time"></div>
   </div>
 
@@ -517,6 +515,27 @@ document.addEventListener('keydown', e => {
   };
   _tick();
   const _clockId = setInterval(_tick, 1000);
+})();
+
+// ── visitor counter ───────────────────────────────────────────────────────
+const _fmtVisits = n => {
+  if (n >= 1000000) return (n / 1000000).toFixed(2) + ' GB';
+  if (n >= 1000)    return (n / 1000).toFixed(2)    + ' KB';
+  return n + ' B';
+};
+
+(function _visits() {
+  const $v = document.getElementById('sb-visits');
+  if (!$v) return;
+  // countapi.xyz — free, no signup, persists across visits
+  // namespace: marcvalbuena-portfolio  key: pageviews
+  fetch('https://api.countapi.xyz/hit/marcvalbuena-portfolio/pageviews')
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(data => {
+      const count = (data && typeof data.value === 'number') ? data.value : 0;
+      $v.textContent = _fmtVisits(count);
+    })
+    .catch(() => { $v.textContent = '0 B'; });
 })();
 
 // ── utilities ──────────────────────────────────────────────────────────────
@@ -705,6 +724,9 @@ function handleCommand(raw) {
         if (el.id === 'ascii-art' || el.id === 'instructions') return;
         el.remove();
       });
+      // reset working directory back to root
+      _cwd = '~';
+      _refreshPrompt();
       break;
 
     case 'help': {
@@ -767,8 +789,8 @@ function handleCommand(raw) {
         ['<span style="color:var(--cyan);">Name</span>',     'Marc Valbuena'],
         ['<span style="color:var(--cyan);">OS</span>',       'marcOS Pro 6.9'],
         ['<span style="color:var(--cyan);">Shell</span>',    "bash (Pls don't!)"],
-        ['<span style="color:var(--cyan);">Terminal</span>', 'Cubao Terminal v1.0.0'],
-        ['<span style="color:var(--cyan);">Role</span>',     'Penetration Tester · Bug Hunter · Security Researcher'],
+        ['<span style="color:var(--cyan);">Terminal</span>', 'DUMB Terminal v1.0.0'],
+        ['<span style="color:var(--cyan);">Role</span>',     'Penetration Tester / Bug Hunter'],
         ['<span style="color:var(--cyan);">Focus</span>',    'Offensive Security · OSINT · CVD · Threat Modeling'],
         ['<span style="color:var(--cyan);">Tools</span>',    'Burp Suite · Metasploit · Nmap · OWASPZAP · SQLMap'],
         ['<span style="color:var(--cyan);">Email</span>',    'marcelinvalbuena@gmail.com'],
@@ -819,8 +841,9 @@ function handleCommand(raw) {
       break;
     }
 
+    case '..':  // fall through — treat bare '..' as 'cd ..'
     case 'cd': {
-      const dest = _resolve(arg);
+      const dest = _resolve(verb === '..' ? '..' : arg);
       if (dest) {
         _cwd = dest;
         _refreshPrompt();
