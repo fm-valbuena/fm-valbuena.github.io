@@ -261,7 +261,7 @@
     /* ── prompt ── */
     .prompt-block {
       font-family: inherit;
-      white-space: pre;
+      white-space: pre-wrap;
       line-height: 1.4;
       margin: 6px 0 2px;
       font-size: 0.82rem;
@@ -292,9 +292,12 @@
       outline: none;
       font-family: inherit;
       font-size: 0.82rem;
-      flex-grow: 1;
       caret-color: var(--green);
       padding-left: 4px;
+      /* grow naturally with typed content — no fixed width cap */
+      width: 1ch;
+      min-width: 1ch;
+      max-width: calc(100% - 20ch);
     }
 
     /* blinking cursor simulation via caret */
@@ -716,6 +719,21 @@ function handleCommand(raw) {
   const tokens = raw.trim().split(/\s+/);
   const verb   = tokens[0].toLowerCase();
   const arg    = tokens[1] || "";
+  const argc   = tokens.length; // total token count including the verb
+
+  // Commands that take NO arguments
+  const _noArgs = ['clear','help','whoami','neofetch','ls','pwd','..'];
+  // Commands that take EXACTLY ONE argument
+  const _oneArg = ['cd','cat'];
+
+  if (_noArgs.includes(verb) && argc > 1) {
+    _line(`${_esc(verb)}: command not found`, 'error');
+    return;
+  }
+  if (_oneArg.includes(verb) && argc > 2) {
+    _line(`${_esc(verb)}: command not found`, 'error');
+    return;
+  }
 
   switch (verb) {
 
@@ -832,6 +850,11 @@ function handleCommand(raw) {
           span.className = 'directory';
           span.textContent = name;
           row.appendChild(span);
+        } else if (node.kind === 'txt') {
+          const span = document.createElement('span');
+          span.className = 'highlight';   // orange — same as [tag] in recognitions
+          span.textContent = name;
+          row.appendChild(span);
         } else {
           row.appendChild(document.createTextNode(name));
         }
@@ -929,6 +952,14 @@ document.addEventListener('keydown', e => {
 
 // ── input handler ──────────────────────────────────────────────────────────
 function _attachInput(inp) {
+  // Dynamically resize input width to match typed content — real terminal feel
+  const _resize = () => {
+    inp.style.width = '1ch';
+    inp.style.width = (inp.value.length + 1) + 'ch';
+  };
+  inp.addEventListener('input', _resize);
+  inp.addEventListener('keyup', _resize);
+
   inp.addEventListener('keydown', e => {
     if (e.key === 'Tab') {
       e.preventDefault();
@@ -948,6 +979,7 @@ function _attachInput(inp) {
       handleCommand(raw);
       $screen.appendChild($inputRow);
       inp.value = '';
+      inp.style.width = '1ch';
       $screen.scrollTop = $screen.scrollHeight;
       setTimeout(_refocus, 0);
     }
